@@ -4,4 +4,4 @@ node_modules
 
 /generated/prisma
 
-/utils/shopmonk-3007ff5592c4.json
+utils/shopmonk-*.json
