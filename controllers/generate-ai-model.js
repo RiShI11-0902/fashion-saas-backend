@@ -1,7 +1,15 @@
 const { GoogleGenAI } = require("@google/genai");
+const prisma = require("../utils/prisma-client");
 
 const generateImage = async (req, res) => {
   try {
+    const user = req.user;
+    console.log(user);
+
+    if (user.allowedGenerate == 0) {
+      return res.status(400).json({ message: "Limit Exceeded" });
+    }
+
     const { prompt } = req.body;
     let base64Image = null;
 
@@ -23,12 +31,7 @@ const generateImage = async (req, res) => {
     }
 
     const ai = new GoogleGenAI({
-      // keyFile: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-      // scopes: ["https://www.googleapis.com/auth/cloud-platform"],
       apiKey: `${process.env.GEMINI_API_KEY}`,
-      // vertexai: true,
-      // project: "shopmonk",
-      // location: "us-central1",
     });
 
     // Call Gemini model
@@ -53,6 +56,11 @@ const generateImage = async (req, res) => {
     if (generatedImages.length === 0) {
       return res.status(500).json({ error: "No image generated" });
     }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { allowedGenerate: { decrement: 1 } },
+    });
 
     return res.status(200).json({
       success: true,

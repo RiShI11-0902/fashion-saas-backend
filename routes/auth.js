@@ -3,6 +3,7 @@ const {
   register,
   login,
   authMiddleware,
+  logout,
   checkAuth,
 } = require("../controllers/auth");
 const passport = require("passport");
@@ -73,5 +74,6 @@ router.get("/profile", (req, res) => {
     res.status(401).json({ message: "Invalid token" });
   }
 });
+router.post("/logout", logout)
 
 module.exports = router;

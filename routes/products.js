@@ -13,7 +13,6 @@ router.post("/", createProduct);
 
 // Update
 router.put("/:id", updateProduct);
-
 // Get all
 router.post("/store", getAllProducts);
 

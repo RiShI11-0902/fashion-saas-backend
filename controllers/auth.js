@@ -1,10 +1,10 @@
-const  jwt =  require("jsonwebtoken");
-const  bcrypt =  require ("bcrypt");
-const  prisma = require ("../utils/prisma-client");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
+const prisma = require("../utils/prisma-client");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-const register = async (req, res) =>  {
+const register = async (req, res) => {
   const { email, password, name } = req.body;
 
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -12,28 +12,44 @@ const register = async (req, res) =>  {
 
   const hashedPassword = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
-    data: { email, password: hashedPassword, name }
+    data: { email, password: hashedPassword, name },
   });
 
-  res.json({ message: "User registered", user: { id: user.id, email: user.email, name: user.name } });
-}
+  const token = jwt.sign(
+    { id: user.id, name: user.name, email: user.email },
+    JWT_SECRET,
+    { expiresIn: "7d" }
+  );
 
-const login = async (req, res) =>  {
+  res.cookie("token", token, { httpOnly: true, secure: false });
+
+  res.json({
+    message: "User registered",
+    user: { id: user.id, email: user.email, name: user.name },
+  });
+};
+
+const login = async (req, res) => {
   const { email, password } = req.body;
 
-  console.log(email,password);
-  
-  
+  console.log(email, password);
+
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) return res.status(400).json({ error: "Invalid credentials" });
 
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return res.status(400).json({ error: "Invalid credentials" });
 
-  const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
+  const token = jwt.sign(
+    { id: user.id, name: user.name, email: user.email },
+    JWT_SECRET,
+    { expiresIn: "7d" }
+  );
 
-  res.json({ token,user });
-}
+  res.cookie("token", token, { httpOnly: true, secure: false });
+
+  res.json({ token, user });
+};
 
 const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
@@ -47,10 +63,12 @@ const authMiddleware = async (req, res, next) => {
   } catch {
     res.status(401).json({ error: "Invalid token" });
   }
-}
+};
 
 const checkAuth = (req, res, next) => {
   const token = req.cookies.token;
+  console.log(token);
+
   if (!token) return res.status(401).json({ isAuthenticated: false });
 
   try {
@@ -62,7 +80,19 @@ const checkAuth = (req, res, next) => {
   }
 };
 
+const logout = async (req,res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "strict",
+  });
+  return res.json({ message: "Logged out successfully" });
+};
 
 module.exports = {
-    register,login,authMiddleware,checkAuth
-}
+  register,
+  login,
+  authMiddleware,
+  checkAuth,
+  logout,
+};
