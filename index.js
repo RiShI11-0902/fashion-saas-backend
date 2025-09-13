@@ -15,8 +15,7 @@ const app = express();
 app.use(cookieParser());
 
 const origins = [
-  "https://shop-monk.netlify.app",
-  "http://localhost:8080"
+  "https://shopmonk.shop",
 ]
 
 app.use(
