@@ -21,7 +21,12 @@ const register = async (req, res) => {
     { expiresIn: "7d" }
   );
 
-  res.cookie("token", token, { httpOnly: true, secure: false });
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // true in prod
+    sameSite: "none", // must be "none" for cross-domain
+    maxAge: 7 * 24 * 60 * 60 * 1000, // example: 7 days
+  });
 
   res.json({
     message: "User registered",
@@ -46,7 +51,12 @@ const login = async (req, res) => {
     { expiresIn: "7d" }
   );
 
-  res.cookie("token", token, { httpOnly: true, secure: false });
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // true in prod
+    sameSite: "none", // must be "none" for cross-domain
+    maxAge: 7 * 24 * 60 * 60 * 1000, // example: 7 days
+  });
 
   res.json({ token, user });
 };
@@ -80,7 +90,7 @@ const checkAuth = (req, res, next) => {
   }
 };
 
-const logout = async (req,res) => {
+const logout = async (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,
     secure: true,

@@ -54,9 +54,14 @@ router.get(
       );
 
       // 4. Set cookie + redirect
-      res.cookie("token", token, { httpOnly: true, secure: false });
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production", // true in prod
+        sameSite: "none", // must be "none" for cross-domain
+        maxAge: 7 * 24 * 60 * 60 * 1000, // example: 7 days
+      });
       //   res.json({token: token, user: user})
-      res.redirect("http://localhost:8080/auth/callback");
+      res.redirect(`${process.env.CLIENT_URL}/auth/callback`);
     } catch (err) {
       console.error("Error in Google callback:", err);
       res.status(500).json({ message: "Internal Server Error" });
@@ -74,6 +79,6 @@ router.get("/profile", (req, res) => {
     res.status(401).json({ message: "Invalid token" });
   }
 });
-router.post("/logout", logout)
+router.post("/logout", logout);
 
 module.exports = router;
