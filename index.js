@@ -6,8 +6,9 @@ const storeRoutes = require('./routes/store');
 const productRoutes = require('./routes/products');
 const orderRoutes = require('./routes/orders');
 const modelRoutes = require('./routes/ai-model');
+const paymentRoutes = require('./routes/payment-routes')
 const cookieParser = require("cookie-parser");
-const passport = require("passport")
+const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 
 dotenv.config();
@@ -55,9 +56,7 @@ app.use('/api/store', storeRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/order', orderRoutes);
 app.use('/api/generate-model', modelRoutes);
-
-
-
+app.use('/api/payment', paymentRoutes);
 
 app.get("/", (req,res)=>{
     res.send("Hello")

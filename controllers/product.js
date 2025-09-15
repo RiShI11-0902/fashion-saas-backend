@@ -5,7 +5,31 @@ const prisma = require("../utils/prisma-client");
  */
 const createProduct = async (req, res) => {
   try {
-    const { name, price, inventory, category, description, image, storeId, discount } = req.body;
+    const user = req.user;
+    const store = await prisma.store.findFirst({
+      where: {
+        ownerId: user.id,
+      },
+    });
+    
+    if (user.plan == null) {
+      if (store?.products?.length == 10) {
+        return res
+          .status(400)
+          .json({ message: "Cannot create more product. please subscribe" });
+      }
+    }
+
+    const {
+      name,
+      price,
+      inventory,
+      category,
+      description,
+      image,
+      storeId,
+      discount,
+    } = req.body;
 
     const newProduct = await prisma.product.create({
       data: {
@@ -33,7 +57,8 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, inventory, category, description, image, discount } = req.body;
+    const { name, price, inventory, category, description, image, discount } =
+      req.body;
 
     const updatedProduct = await prisma.product.update({
       where: { id },
@@ -61,9 +86,9 @@ const updateProduct = async (req, res) => {
  */
 const getAllProducts = async (req, res) => {
   try {
-    const {storeId} = req.body;
+    const { storeId } = req.body;
     const products = await prisma.product.findMany({
-      where:{ storeId: storeId} // optional: include store details
+      where: { storeId: storeId }, // optional: include store details
     });
     res.json({ products });
   } catch (error) {

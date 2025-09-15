@@ -68,13 +68,9 @@ router.get(
     }
   }
 );
-router.get("/profile", (req, res) => {
-  const token = req.cookies.token;
-  if (!token) return res.status(401).json({ message: "Unauthorized" });
-
+router.get("/profile", checkAuth, (req, res) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    res.json({ user: decoded });
+   res.json({ isAuthenticated: true, user: req.user });
   } catch (err) {
     res.status(401).json({ message: "Invalid token" });
   }

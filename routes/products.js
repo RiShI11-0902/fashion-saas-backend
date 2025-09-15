@@ -7,12 +7,13 @@ const {
   getProductById,
   deleteProduct,
 } = require("../controllers/product");
+const { checkAuth } = require("../controllers/auth");
 
 // Create
-router.post("/", createProduct);
+router.post("/", checkAuth, createProduct);
 
 // Update
-router.put("/:id", updateProduct);
+router.put("/:id", checkAuth, updateProduct);
 // Get all
 router.post("/store", getAllProducts);
 
@@ -20,6 +21,6 @@ router.post("/store", getAllProducts);
 router.get("/:id", getProductById);
 
 // Delete
-router.delete("/delete/:id", deleteProduct);
+router.delete("/delete/:id", checkAuth, deleteProduct);
 
 module.exports = router;

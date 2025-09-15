@@ -4,10 +4,10 @@ const prisma = require("../utils/prisma-client");
 const generateImage = async (req, res) => {
   try {
     const user = req.user;
-    console.log(user);
+
 
     if (user.allowedGenerate == 0) {
-      return res.status(400).json({ message: "Limit Exceeded" });
+      return res.status(400).json({ message: "Limit exceeded subscribe to generate More" });
     }
 
     const { prompt } = req.body;
@@ -73,77 +73,3 @@ const generateImage = async (req, res) => {
 };
 
 module.exports = { generateImage };
-
-// const ai = new GoogleGenAI({
-//   vertexai: true,
-//   project: "shopmonk",  // 🔹 replace with your project ID
-//   location: "us-central1",
-// });
-
-// const model = "gemini-2.5-flash-image-preview";
-
-// const generationConfig = {
-//   maxOutputTokens: 32768,
-//   temperature: 1,
-//   topP: 0.95,
-//   responseModalities: ["TEXT", "IMAGE"],
-//   safetySettings: [
-//     { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "OFF" },
-//     { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "OFF" },
-//     { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "OFF" },
-//     { category: "HARM_CATEGORY_HARASSMENT", threshold: "OFF" },
-//   ],
-// };
-
-// const generateImage = async (req, res) => {
-//   try {
-//     const { prompt } = req.body;
-//     const file = req.file; // multer memory upload
-
-//     if (!prompt || !file) {
-//       return res.status(400).json({ error: "Prompt and image are required" });
-//     }
-
-//     // Convert image to base64 (already in memory buffer)
-//     const base64Image = file.buffer.toString("base64");
-
-//     const reqData = {
-//       model,
-//       contents: [
-//         {
-//           role: "user",
-//           parts: [
-//             { text: prompt },
-//             {
-//               inlineData: {
-//                 mimeType: file.mimetype,
-//                 data: base64Image,
-//               },
-//             },
-//           ],
-//         },
-//       ],
-//       config: generationConfig,
-//     };
-
-//     const response = await ai.models.generateContent(reqData);
-
-//     const imagePart = response.candidates?.[0]?.content?.parts?.find(
-//       (p) => p.inlineData && p.inlineData.mimeType?.startsWith("image/")
-//     );
-
-//     if (!imagePart) {
-//       return res.status(500).json({ error: "No image generated" });
-//     }
-
-//     const imageBase64 = imagePart.inlineData.data;
-//     const imageUrl = `data:${imagePart.inlineData.mimeType};base64,${imageBase64}`;
-
-//     res.json({ image: imageUrl });
-//   } catch (err) {
-//     console.error("Error generating image:", err);
-//     res.status(500).json({ error: "Image generation failed", details: err.message });
-//   }
-// };
-
-// module.exports = {generateImage}

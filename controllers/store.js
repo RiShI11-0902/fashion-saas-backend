@@ -9,15 +9,14 @@ const createStore = async (req, res) => {
       name,
       description,
       logo,
-      imageUrl,
+      banner,
       url,
       ownerId,
       categories,
       slug,
       mobileNumber
     } = req.body;
-    const banner = imageUrl;
-
+    
     const newStore = await prisma.store.create({
       data: {
         name,
@@ -40,8 +39,6 @@ const createStore = async (req, res) => {
 };
 
 const getUserStores = async (req, res) => {
-  console.log("hi");
-
   try {
     const { userId } = req.params;
     console.log(userId);

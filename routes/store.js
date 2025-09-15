@@ -1,21 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const { createStore, updateStore, deleteStore,getUserStores, getUserStoreById, getUserStoreBySlug} = require('../controllers/store');
+const { checkAuth } = require('../controllers/auth');
 
 // Create store
-router.post('/', createStore);
+router.post('/', checkAuth, createStore);
 
 // Update store
-router.put('/:id', updateStore);
+router.put('/:id', checkAuth, updateStore);
 
 // Delete store
-router.delete('/:id', deleteStore);
+router.delete('/:id', checkAuth, deleteStore);
 
 // Get User Store
-router.get('/user/:userId', getUserStores);
+router.get('/user/:userId', checkAuth, getUserStores);
 
 //Get User Store by ID
-router.get('/id/:storeId', getUserStoreById);
+router.get('/id/:storeId', checkAuth, getUserStoreById);
 
 //Get Store by Slug
 router.get('/:slug', getUserStoreBySlug);

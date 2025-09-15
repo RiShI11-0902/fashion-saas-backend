@@ -37,10 +37,8 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body;
 
-  console.log(email, password);
-
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) return res.status(400).json({ error: "Invalid credentials" });
+  if (!user) return res.status(400).json({ error: "You are not registered" });
 
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return res.status(400).json({ error: "Invalid credentials" });
@@ -53,9 +51,10 @@ const login = async (req, res) => {
 
   res.cookie("token", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // true in prod
-    sameSite: "none", // must be "none" for cross-domain
-    maxAge: 7 * 24 * 60 * 60 * 1000, // example: 7 days
+    secure: process.env.NODE_ENV === "production", // only true on HTTPS
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    path: "/", // make it available everywhere
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
   res.json({ token, user });
@@ -75,15 +74,24 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
-const checkAuth = (req, res, next) => {
-  const token = req.cookies.token;
-  console.log(token);
+const checkAuth = async (req, res, next) => {
+  const token = req.cookies.token;  
 
   if (!token) return res.status(401).json({ isAuthenticated: false });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // attach user
+
+    let userProfile = await prisma.user.findUnique({
+      where: { id: decoded.id },
+    });
+
+    if (userProfile) {
+      const { password, ...safeUser } = userProfile;
+      userProfile = safeUser;
+    }
+    
+    req.user = userProfile; // attach user
     next();
   } catch {
     return res.status(401).json({ isAuthenticated: false });
