@@ -146,7 +146,7 @@ const payment_verification = async (req, res) => {
       where: { id: subscription.id },
       data: { 
         status: "ACTIVE",
-        plan:'Premimum'
+        plan:'PREMIUM'
       },
     });
 
@@ -155,7 +155,7 @@ const payment_verification = async (req, res) => {
       where:{ id: user.id},
       data:{ 
         allowedGenerate: 200,
-        plan:'Premium'
+        plan:'PREMIUM'
        }
     })
 

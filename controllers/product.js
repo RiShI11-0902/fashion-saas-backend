@@ -29,7 +29,8 @@ const createProduct = async (req, res) => {
       image,
       storeId,
       discount,
-    } = req.body;
+      sizes
+    } = req.body;    
 
     const newProduct = await prisma.product.create({
       data: {
@@ -41,6 +42,7 @@ const createProduct = async (req, res) => {
         image,
         storeId,
         discount,
+        sizes
       },
     });
 
@@ -57,7 +59,7 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, inventory, category, description, image, discount } =
+    const { name, price, inventory, category, description, image, discount,sizes } =
       req.body;
 
     const updatedProduct = await prisma.product.update({
@@ -71,6 +73,7 @@ const updateProduct = async (req, res) => {
         image,
         discount,
         updatedAt: new Date(),
+        sizes
       },
     });
 
