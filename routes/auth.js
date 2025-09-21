@@ -60,7 +60,6 @@ router.get(
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         path: "/", // make it available everywhere
         maxAge: 7 * 24 * 60 * 60 * 1000,
-        domain: ".shopmonk.shop",
       });
       //   res.json({token: token, user: user})
       res.redirect(`${process.env.CLIENT_URL}/auth/callback`);
