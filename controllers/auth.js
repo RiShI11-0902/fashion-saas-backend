@@ -26,6 +26,7 @@ const register = async (req, res) => {
     secure: process.env.NODE_ENV === "production", // true in prod
     sameSite: "none", // must be "none" for cross-domain
     maxAge: 7 * 24 * 60 * 60 * 1000, // example: 7 days
+    domain: ".shopmonk.shop",
   });
 
   res.json({
@@ -55,6 +56,7 @@ const login = async (req, res) => {
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     path: "/", // make it available everywhere
     maxAge: 7 * 24 * 60 * 60 * 1000,
+    domain: ".shopmonk.shop",
   });
 
   res.json({ token, user });
@@ -76,7 +78,7 @@ const authMiddleware = async (req, res, next) => {
 
 const checkAuth = async (req, res, next) => {
   const token = req.cookies.token;  
-
+  
   if (!token) return res.status(401).json({ isAuthenticated: false });
 
   try {
@@ -103,6 +105,7 @@ const logout = async (req, res) => {
     secure: process.env.NODE_ENV === "production", // only true on HTTPS
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     path: "/", // make it available everywhere
+    domain: ".shopmonk.shop",
   });
   return res.json({ message: "Logged out successfully" });
 };

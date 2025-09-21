@@ -56,9 +56,11 @@ router.get(
       // 4. Set cookie + redirect
       res.cookie("token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // true in prod
-        sameSite: "none", // must be "none" for cross-domain
-        maxAge: 7 * 24 * 60 * 60 * 1000, // example: 7 days
+        secure: process.env.NODE_ENV === "production", // only true on HTTPS
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/", // make it available everywhere
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        domain: ".shopmonk.shop",
       });
       //   res.json({token: token, user: user})
       res.redirect(`${process.env.CLIENT_URL}/auth/callback`);
@@ -70,7 +72,7 @@ router.get(
 );
 router.get("/profile", checkAuth, (req, res) => {
   try {
-   res.json({ isAuthenticated: true, user: req.user });
+    res.json({ isAuthenticated: true, user: req.user });
   } catch (err) {
     res.status(401).json({ message: "Invalid token" });
   }
