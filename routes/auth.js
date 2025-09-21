@@ -11,7 +11,7 @@ const jwt = require("jsonwebtoken");
 const prisma = require("../utils/prisma-client");
 
 const router = express.Router();
-router.get("/check", checkAuth, (req, res) => {
+router.get("/check", authMiddleware, (req, res) => {
   res.json({ isAuthenticated: true, user: req.user });
 });
 
@@ -54,15 +54,15 @@ router.get(
       );
 
       // 4. Set cookie + redirect
-      res.cookie("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // only true on HTTPS
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        path: "/", // make it available everywhere
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
+      // res.cookie("token", token, {
+      //   httpOnly: true,
+      //   secure: process.env.NODE_ENV === "production", // only true on HTTPS
+      //   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      //   path: "/", // make it available everywhere
+      //   maxAge: 7 * 24 * 60 * 60 * 1000,
+      // });
       //   res.json({token: token, user: user})
-      res.redirect(`${process.env.CLIENT_URL}/auth/callback`);
+      res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
     } catch (err) {
       console.error("Error in Google callback:", err);
       res.status(500).json({ message: "Internal Server Error" });
