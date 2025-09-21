@@ -13,22 +13,119 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// model User {
+//   id              String        @id @default(uuid())
+//   email           String        @unique
+//   password        String?
+//   avatar          String? // Google profile picture
+//   googleId        String?       @unique
+//   name            String?
+//   stores          Store[]
+//   plan            Plan? // FREE, PREMIUM, or null if only buying AI pack
+//   subscription    Subscription?
+//   allowedGenerate Int           @default(1)
+//   createdAt       DateTime      @default(now())
+//   updatedAt       DateTime      @default(now())
+
+//   Payment Payment[]
+// }
+
+// model Subscription {
+//   id                     String    @id @default(uuid())
+//   user                   User      @relation(fields: [userId], references: [id])
+//   userId                 String    @unique
+//   plan                   Plan?
+//   razorpaySubscriptionId String    @unique // store Razorpay subscription id
+//   payments               Payment[] // relation to Payment
+//   aiPacks                AIPack[] // Optional: store selected AI packs
+//   status                 String // PENDING, ACTIVE, CANCELLED
+//   startedAt              DateTime  @default(now())
+//   expiresAt              DateTime?
+//   createdAt              DateTime  @default(now())
+//   updatedAt              DateTime  @updatedAt
+// }
+
+// model Payment {
+//   id                     String        @id @default(uuid())
+//   razorpayPaymentId      String        @unique // e.g. "pay_xxxxx"
+//   razorpaySubscriptionId String? // optional if using orders
+//   razorpaySignature      String? // signature from webhook
+//   amount                 Int
+//   currency               String        @default("INR")
+//   status                 String // created, captured, failed
+//   subscription           Subscription? @relation(fields: [subscriptionId], references: [id])
+//   subscriptionId         String?
+//   user                   User          @relation(fields: [userId], references: [id])
+//   userId                 String
+//   createdAt              DateTime      @default(now())
+// }
+
 model User {
   id              String        @id @default(uuid())
   email           String        @unique
   password        String?
-  avatar          String? // Google profile picture
+  avatar          String?       // Google profile picture
   googleId        String?       @unique
   name            String?
   stores          Store[]
-  plan            Plan? // FREE, PREMIUM, or null if only buying AI pack
-  subscription    Subscription?
+  plan            Plan?         // FREE, PREMIUM, or null if only buying AI pack
+  subscriptions   Subscription[]
   allowedGenerate Int           @default(1)
   createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
-  Payment Payment[]
+  payments        Payment[]
 }
+
+model Subscription {
+  id                     String              @id @default(uuid())
+  user                   User                @relation(fields: [userId], references: [id])
+  userId                 String
+  plan                   Plan?
+  razorpaySubscriptionId String?             @unique // Razorpay subscription id (only unique globally)
+  payments               Payment[]           // relation to Payment
+  status                 SubscriptionStatus
+  startedAt              DateTime            @default(now())
+  expiresAt              DateTime?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([userId, status]) // helps to quickly query ACTIVE subscription for a user
+}
+
+model Payment {
+  id                     String        @id @default(uuid())
+  razorpayPaymentId      String        @unique // e.g. "pay_xxxxx"
+  razorpaySubscriptionId String?       // optional if using orders
+  razorpaySignature      String?       // signature from webhook
+  amount                 Int
+  currency               String        @default("INR")
+  status                 PaymentStatus
+  subscription           Subscription? @relation(fields: [subscriptionId], references: [id])
+  subscriptionId         String?
+  user                   User          @relation(fields: [userId], references: [id])
+  userId                 String
+  createdAt              DateTime      @default(now())
+}
+
+enum Plan {
+  FREE
+  PREMIUM
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  CANCELLED
+  CREATED
+}
+
+enum PaymentStatus {
+  CREATED
+  CAPTURED
+  FAILED
+}
+
 
 model Store {
   id           String    @id @default(uuid())
@@ -58,7 +155,7 @@ model Product {
   image       String
   storeId     String
   discount    Int      @default(0)
-  sizes       String[]
+  sizes       String[] @default([])
   store       Store    @relation(fields: [storeId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now())
@@ -92,7 +189,7 @@ model OrderItem {
   imageUrl  String?
   storeId   String
   storeName String
-  size      String
+  size      String?
 
   // Relation to Order
   orderId String
@@ -107,46 +204,4 @@ enum OrderStatus {
   CANCELLED
 }
 
-enum Plan {
-  FREE
-  PREMIUM
-  AI_ONLY
-}
 
-model Subscription {
-  id                     String    @id @default(uuid())
-  user                   User      @relation(fields: [userId], references: [id])
-  userId                 String    @unique
-  plan                   Plan?
-  razorpaySubscriptionId String    @unique // store Razorpay subscription id
-  payments               Payment[] // relation to Payment
-  aiPacks                AIPack[] // Optional: store selected AI packs
-  status                 String // PENDING, ACTIVE, CANCELLED
-  startedAt              DateTime  @default(now())
-  expiresAt              DateTime?
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
-}
-
-model AIPack {
-  id             String        @id @default(uuid())
-  name           String
-  price          Float
-  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
-  subscriptionId String?
-}
-
-model Payment {
-  id                     String        @id @default(uuid())
-  razorpayPaymentId      String        @unique // e.g. "pay_xxxxx"
-  razorpaySubscriptionId String? // optional if using orders
-  razorpaySignature      String? // signature from webhook
-  amount                 Int
-  currency               String        @default("INR")
-  status                 String // created, captured, failed
-  subscription           Subscription? @relation(fields: [subscriptionId], references: [id])
-  subscriptionId         String?
-  user                   User          @relation(fields: [userId], references: [id])
-  userId                 String
-  createdAt              DateTime      @default(now())
-}

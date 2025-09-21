@@ -1,3 +1,4 @@
+const { json } = require("body-parser");
 const { instance } = require("../config/paymentConfig");
 const prisma = require("../utils/prisma-client");
 const crypto = require("node:crypto");
@@ -7,7 +8,7 @@ const getUserSubscriptions = async (req, res) => {
     // req.user should come from JWT middleware (decoded token)
     const userId = req.user.id;
 
-    const subscription = await prisma.subscription.findUnique({
+    const subscription = await prisma.subscription.findMany({
       where: { userId },
       select: {
         id: true,
@@ -25,6 +26,8 @@ const getUserSubscriptions = async (req, res) => {
       subscription,
     });
   } catch (error) {
+    console.log(error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to fetch subscriptions",
@@ -41,66 +44,59 @@ const getKey = (async = (req, res) => {
   }
 });
 
-const create_Subscription = async (req, res, next) => {
+const create_Subscription = async (req, res) => {
   try {
     const user = req.user;
-
-    if (!user)
+    if (!user) {
       return res
         .status(401)
-        .json({ sucess: false, message: "Not Authenticated" });
-
-    console.log(user);
-
-    const subscriptionResponse = await instance.subscriptions.create({
-      plan_id: process.env.PLAN_ID,
-      total_count: 12,
-      customer_notify: 1,
-    });
-
-    const existingSub = await prisma.subscription.findUnique({
-      where: { userId: user.id },
-    });
-
-    if (existingSub) {
-      // update existing subscription
-      await prisma.subscription.update({
-        where: { userId: user.id },
-        data: {
-          razorpaySubscriptionId: subscriptionResponse.id,
-          status: subscriptionResponse.status, // usually "created"
-        },
-      });
-    } else {
-      // create new subscription
-      await prisma.subscription.create({
-        data: {
-          userId: user.id,
-          razorpaySubscriptionId: subscriptionResponse.id,
-          status: subscriptionResponse.status,
-        },
-      });
+        .json({ success: false, message: "Not Authenticated" });
     }
 
-    // await prisma.user.update({
-    //   where: { id: user.id },
+    // 1️⃣ Create a new subscription on Razorpay
+    // const subscriptionResponse = await instance.subscriptions.create({
+    //   plan_id: process.env.PLAN_ID,
+    //   total_count: 12,
+    //   customer_notify: 1,
+    // });
+
+    // // 2️⃣ Check if user has any ACTIVE subscription
+    // const activeSub = await prisma.subscription.findFirst({
+    //   where: { userId: user.id, status: "ACTIVE" },
+    //   orderBy: { createdAt: "desc" },
+    // });
+
+    // if (activeSub) {
+    //   // Cancel old subscription in DB
+    //   await prisma.subscription.update({
+    //     where: { id: activeSub.id }, // ✅ unique id
+    //     data: { status: "CANCELLED", expiresAt: new Date() },
+    //   });
+
+    //   // Optionally, you can also cancel it on Razorpay using API
+    //   // await instance.subscriptions.cancel(activeSub.razorpaySubscriptionId);
+    // }
+
+    // 3️⃣ Create a new subscription in DB
+    // const newSub = await prisma.subscription.create({
     //   data: {
-    //     subscription: {
-    //       create: {
-    //         razorpaySubscriptionId: subscription.id, // from Razorpay response
-    //         status: subscription.status, // e.g. "created"
-    //       },
-    //     },
+    //     userId: user.id,
+    //     razorpaySubscriptionId: subscriptionResponse.id,
+    //     status: subscriptionResponse.status.toUpperCase(), // usually "CREATED"
+    //     startedAt: new Date(),
     //   },
     // });
 
-    res
-      .status(201)
-      .json({ sucess: true, subscription: subscriptionResponse.id });
+    // 4️⃣ Return subscription id to frontend
+    res.status(201).json({
+      success: true,
+      subscription: newSub.razorpaySubscriptionId,
+    });
   } catch (error) {
-    console.log(error);
-
-    return res.status(400).json({ sucess: false, message: "Error Occurred" });
+    console.error("Create Subscription Error:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Error creating subscription" });
   }
 };
 
@@ -110,80 +106,228 @@ const payment_verification = async (req, res) => {
       razorpay_payment_id,
       razorpay_subscription_id,
       razorpay_signature,
+      razorpay_order_id
     } = req.body;
+    const user = req.user;
 
-    const user = req.user; // coming from auth middleware
-    if (!user) {
+    if (!user)
       return res
         .status(401)
         .json({ success: false, message: "Not Authenticated" });
-    }
 
-    // 1️⃣ Get subscription from your DB
-    const subscription = await prisma.subscription.findUnique({
-      where: { userId: user.id },
-    });
+    // ✅ Find subscription by razorpaySubscriptionId (unique)
+    // const subscription = await prisma.subscription.findUnique({
+    //   where: { razorpaySubscriptionId: razorpay_subscription_id },
+    // });
 
-    if (!subscription) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Subscription not found" });
-    }
+    // if (!subscription)
+    //   return res
+    //     .status(404)
+    //     .json({ success: false, message: "Subscription not found" });
 
+    // ✅ Verify signature
     const generated_signature = crypto
       .createHmac("sha256", process.env.RAZORPAY_SECRET_KEY)
-      .update(`${razorpay_payment_id}|${razorpay_subscription_id}`)
+      .update(`${razorpay_payment_id}|${razorpay_subscription_id ? razorpay_subscription_id : razorpay_order_id}`)
       .digest("hex");
 
     const isAuthentic = generated_signature === razorpay_signature;
-
-    if (!isAuthentic) {
+    console.log(isAuthentic);
+    
+    if (!isAuthentic){
       return res.redirect(`${process.env.CLIENT_URL}/payment-failed`);
     }
 
-    // 3️⃣ Update subscription status → ACTIVE
-    await prisma.subscription.update({
-      where: { id: subscription.id },
-      data: { 
-        status: "ACTIVE",
-        plan:'PREMIUM'
-      },
+    // ✅ Update subscription to ACTIVE
+    // await prisma.subscription.update({
+    //   where: { id: subscription.id },
+    //   data: { status: "ACTIVE", plan: "PREMIUM" },
+    // });
+
+    // // ✅ Update user
+    // await prisma.user.update({
+    //   where: { id: user.id },
+    //   data: { allowedGenerate: 200, plan: "PREMIUM" },
+    // });
+
+    // // ✅ Store payment record
+    // await prisma.payment.create({
+    //   data: {
+    //     razorpayPaymentId: razorpay_payment_id,
+    //     razorpaySubscriptionId: razorpay_subscription_id,
+    //     razorpaySignature: razorpay_signature,
+    //     amount: 300000, // Replace with real amount
+    //     currency: "INR",
+    //     status: "CAPTURED",
+    //     subscription: { connect: { id: subscription.id } },
+    //     user: { connect: { id: user.id } },
+    //   },
+    // });
+
+    if (razorpay_subscription_id) {
+     return res.status(200).json({
+        success: true,
+        message: "payment Verified updating your account..",
+        razorpay_payment_id,
+        razorpay_subscription_id,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "payment Verified updating your account..",
+      razorpay_payment_id,
     });
-
-    /// update User
-    await prisma.user.update({
-      where:{ id: user.id},
-      data:{ 
-        allowedGenerate: 200,
-        plan:'PREMIUM'
-       }
-    })
-
-    // 4️⃣ Store payment record
-    await prisma.payment.create({
-      data: {
-        razorpayPaymentId: razorpay_payment_id,
-        razorpaySubscriptionId: razorpay_subscription_id,
-        razorpaySignature: razorpay_signature,
-        amount: 300000, // ⚠️ Replace with real amount from webhook/plan
-        currency: "INR",
-        status: "captured",
-        subscription: {
-          connect: { id: subscription.id }, // ✅ links to Subscription
-        },
-        user: {
-          connect: { id: user.id }, // ✅ links to User
-        },
-      },
-    });
-
-    // 5️⃣ Redirect success
-    res.redirect(`${process.env.CLIENT_URL}/payment-success`);
   } catch (error) {
     console.error("Payment verification error:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+// const create_Subscription = async (req, res, next) => {
+//   try {
+//     const user = req.user;
+
+//     if (!user)
+//       return res
+//         .status(401)
+//         .json({ sucess: false, message: "Not Authenticated" });
+
+//     console.log(user);
+
+//     const subscriptionResponse = await instance.subscriptions.create({
+//       plan_id: process.env.PLAN_ID,
+//       total_count: 12,
+//       customer_notify: 1,
+//     });
+
+//     const existingSub = await prisma.subscription.findFirst({
+//       where: { userId: user.id },
+//     });
+
+//     if (existingSub) {
+//       // update existing subscription
+//       await prisma.subscription.update({
+//         where: { id: existingSub.id },
+//         data: {
+//           razorpaySubscriptionId: subscriptionResponse.id,
+//           status: subscriptionResponse.status.toUpperCase(), // usually "created"
+//         },
+//       });
+//     } else {
+//       // create new subscription
+//       await prisma.subscription.create({
+//         data: {
+//           userId: user.id,
+//           razorpaySubscriptionId: subscriptionResponse.id,
+//           status: subscriptionResponse.status.toUpperCase(),
+//         },
+//       });
+//     }
+
+//     await prisma.user.update({
+//       where: { id: user.id },
+//       data: {
+//         subscriptions: {
+//           create: {
+//             razorpaySubscriptionId: subscriptionResponse.id, // from Razorpay response
+//             status: subscriptionResponse.status.toUpperCase(), // e.g. "created"
+//           },
+//         },
+//       },
+//     });
+
+//     res
+//       .status(201)
+//       .json({ sucess: true, subscription: subscriptionResponse.id });
+//   } catch (error) {
+//     console.log(error);
+//     return res.status(400).json({ sucess: false, message: "Error Occurred" });
+//   }
+// };
+
+// const payment_verification = async (req, res) => {
+//   try {
+//     const {
+//       razorpay_payment_id,
+//       razorpay_subscription_id,
+//       razorpay_signature,
+//     } = req.body;
+
+//     const user = req.user; // coming from auth middleware
+//     if (!user) {
+//       return res
+//         .status(401)
+//         .json({ success: false, message: "Not Authenticated" });
+//     }
+
+//     // 1️⃣ Get subscription from your DB
+//     const subscription = await prisma.subscription.findUnique({
+//       where: { userId: user.id },
+//     });
+
+//     if (!subscription) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Subscription not found" });
+//     }
+
+//     const generated_signature = crypto
+//       .createHmac("sha256", process.env.RAZORPAY_SECRET_KEY)
+//       .update(`${razorpay_payment_id}|${razorpay_subscription_id}`)
+//       .digest("hex");
+
+//     const isAuthentic = generated_signature === razorpay_signature;
+
+//     if (!isAuthentic) {
+//       return res.redirect(`${process.env.CLIENT_URL}/payment-failed`);
+//     }
+
+//     // 3️⃣ Update subscription status → ACTIVE
+//     await prisma.subscription.update({
+//       where: { id: subscription.id },
+//       data: {
+//         status: "ACTIVE",
+//         plan:'PREMIUM'
+//       },
+//     });
+
+//     /// update User
+//     await prisma.user.update({
+//       where:{ id: user.id},
+//       data:{
+//         allowedGenerate: 200,
+//         plan:'PREMIUM'
+//        }
+//     })
+
+//     // 4️⃣ Store payment record
+//     await prisma.payment.create({
+//       data: {
+//         razorpayPaymentId: razorpay_payment_id,
+//         razorpaySubscriptionId: razorpay_subscription_id,
+//         razorpaySignature: razorpay_signature,
+//         amount: 300000, // ⚠️ Replace with real amount from webhook/plan
+//         currency: "INR",
+//         status: "captured",
+//         subscription: {
+//           connect: { id: subscription.id }, // ✅ links to Subscription
+//         },
+//         user: {
+//           connect: { id: user.id }, // ✅ links to User
+//         },
+//       },
+//     });
+
+//     res.status(200).json({success: true, razorpay_payment_id:razorpay_payment_id,razorpay_subscription_id:razorpay_subscription_id })
+
+//     // 5️⃣ Redirect success
+//     // res.redirect(`${process.env.CLIENT_URL}/payment-success`);
+//   } catch (error) {
+//     console.error("Payment verification error:", error);
+//     res.status(500).json({ success: false, error: error.message });
+//   }
+// };
 
 // const payment_verification = async (req, res) => {
 //   try {
@@ -275,12 +419,14 @@ const cancel_subscription = async (req, res) => {
     //   select: { razorpaySubscriptionId: true },
     // });
 
-    const cancel = await instance.subscriptions.cancel(subscription.razorpaySubscriptionId);    
+    const cancel = await instance.subscriptions.cancel(
+      subscription.razorpaySubscriptionId
+    );
 
     await prisma.subscription.update({
       where: { id: subscription.id },
-      data: { 
-        status: cancel.status
+      data: {
+        status: cancel.status,
       },
     });
 
@@ -290,22 +436,35 @@ const cancel_subscription = async (req, res) => {
     //   },
     // });
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message:
-          "Subscription Cancel Successfully. You won't be charged from next month.",
-      });
+    res.status(200).json({
+      success: true,
+      message:
+        "Subscription Cancel Successfully. You won't be charged from next month.",
+    });
   } catch (error) {
     console.log(error);
-    res
-      .status(400)
-      .json({
-        success: false,
-        message:
-          "Server Error",
-      });
+    res.status(400).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
+const buyImages = async (req, res) => {
+  try {
+    const order = await instance.orders.create({
+      amount: 55000,
+      currency: "INR",
+      receipt: "receipt" + Date.now(),
+    });
+
+    res.status(201).json({
+      success: true,
+      order: order,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -315,4 +474,5 @@ module.exports = {
   getKey,
   cancel_subscription,
   getUserSubscriptions,
+  buyImages,
 };

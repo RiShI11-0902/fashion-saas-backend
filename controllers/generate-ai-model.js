@@ -4,8 +4,6 @@ const prisma = require("../utils/prisma-client");
 const generateImage = async (req, res) => {
   try {
     const user = req.user;
-
-
     if (user.allowedGenerate == 0) {
       return res.status(400).json({ message: "Limit exceeded subscribe to generate More" });
     }

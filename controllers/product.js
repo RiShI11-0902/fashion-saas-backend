@@ -11,7 +11,7 @@ const createProduct = async (req, res) => {
         ownerId: user.id,
       },
     });
-    
+
     if (user.plan == null) {
       if (store?.products?.length == 10) {
         return res
@@ -29,8 +29,8 @@ const createProduct = async (req, res) => {
       image,
       storeId,
       discount,
-      sizes
-    } = req.body;    
+      sizes,
+    } = req.body;
 
     const newProduct = await prisma.product.create({
       data: {
@@ -42,7 +42,7 @@ const createProduct = async (req, res) => {
         image,
         storeId,
         discount,
-        sizes
+        sizes,
       },
     });
 
@@ -59,8 +59,16 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, inventory, category, description, image, discount,sizes } =
-      req.body;
+    const {
+      name,
+      price,
+      inventory,
+      category,
+      description,
+      image,
+      discount,
+      sizes,
+    } = req.body;
 
     const updatedProduct = await prisma.product.update({
       where: { id },
@@ -73,7 +81,7 @@ const updateProduct = async (req, res) => {
         image,
         discount,
         updatedAt: new Date(),
-        sizes
+        sizes,
       },
     });
 
@@ -89,11 +97,28 @@ const updateProduct = async (req, res) => {
  */
 const getAllProducts = async (req, res) => {
   try {
-    const { storeId } = req.body;
+    const { storeId, category, page = 1, limit = 10 } = req.body;
+    const skip = (page - 1) * limit;
+
+    if (!storeId) {
+      return res.json({ products: [], total: 0 });
+    }
+    const filter = { storeId };
+    if (category) {
+      filter.category = category;
+    }
+
     const products = await prisma.product.findMany({
-      where: { storeId: storeId }, // optional: include store details
+      where: filter,
+      skip,
+      take: limit,
     });
-    res.json({ products });
+
+    const total = await prisma.product.count({
+      where: { storeId: storeId },
+    });
+
+    res.json({ products, total });
   } catch (error) {
     console.error("Error fetching products:", error);
     res.status(500).json({ error: "Failed to fetch products" });

@@ -40,6 +40,7 @@ const createOrder = async (req, res) => {
             imageUrl: item.imageUrl,
             storeId: item.storeId,
             storeName: item.storeName,
+            size: item.size
           })),
         },
         orderNumber
@@ -57,7 +58,7 @@ const createOrder = async (req, res) => {
 // Get all orders
 const getOrders = async (req, res) => {
   try {
-    const { storeId } = req.body;
+    const { storeId } = req.body;    
 
     if (!storeId) {
       return res.status(500).json({ error: "Failed to fetch orders" });
