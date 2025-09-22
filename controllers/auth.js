@@ -67,7 +67,16 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader.split(" ")[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
+    let userProfile = await prisma.user.findUnique({
+      where: { id: decoded.id },
+    });
+
+    if (userProfile) {
+      const { password, ...safeUser } = userProfile;
+      userProfile = safeUser;
+    }
+
+    req.user = userProfile; // attach user
     next();
   } catch {
     res.status(401).json({ error: "Invalid token" });
@@ -75,8 +84,8 @@ const authMiddleware = async (req, res, next) => {
 };
 
 const checkAuth = async (req, res, next) => {
-  const token = req.cookies.token;  
-  
+  const token = req.cookies.token;
+
   if (!token) return res.status(401).json({ isAuthenticated: false });
 
   try {
@@ -90,7 +99,7 @@ const checkAuth = async (req, res, next) => {
       const { password, ...safeUser } = userProfile;
       userProfile = safeUser;
     }
-    
+
     req.user = userProfile; // attach user
     next();
   } catch {
