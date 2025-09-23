@@ -21,16 +21,10 @@ const register = async (req, res) => {
     { expiresIn: "7d" }
   );
 
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // true in prod
-    sameSite: "none", // must be "none" for cross-domain
-    maxAge: 7 * 24 * 60 * 60 * 1000, // example: 7 days
-  });
-
   res.json({
     message: "User registered",
     user: { id: user.id, email: user.email, name: user.name },
+    token: token
   });
 };
 
@@ -48,14 +42,6 @@ const login = async (req, res) => {
     JWT_SECRET,
     { expiresIn: "7d" }
   );
-
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // only true on HTTPS
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    path: "/", // make it available everywhere
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
 
   res.json({ token, user });
 };

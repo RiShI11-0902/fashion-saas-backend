@@ -54,38 +54,34 @@ const create_Subscription = async (req, res) => {
     }
 
     // 1️⃣ Create a new subscription on Razorpay
-    // const subscriptionResponse = await instance.subscriptions.create({
-    //   plan_id: process.env.PLAN_ID,
-    //   total_count: 12,
-    //   customer_notify: 1,
-    // });
+    const subscriptionResponse = await instance.subscriptions.create({
+      plan_id: process.env.PLAN_ID,
+      total_count: 12,
+      customer_notify: 1,
+    });
 
     // // 2️⃣ Check if user has any ACTIVE subscription
-    // const activeSub = await prisma.subscription.findFirst({
-    //   where: { userId: user.id, status: "ACTIVE" },
-    //   orderBy: { createdAt: "desc" },
-    // });
+    const activeSub = await prisma.subscription.findFirst({
+      where: { userId: user.id, status: "ACTIVE" },
+      orderBy: { createdAt: "desc" },
+    });
 
-    // if (activeSub) {
-    //   // Cancel old subscription in DB
-    //   await prisma.subscription.update({
-    //     where: { id: activeSub.id }, // ✅ unique id
-    //     data: { status: "CANCELLED", expiresAt: new Date() },
-    //   });
-
-    //   // Optionally, you can also cancel it on Razorpay using API
-    //   // await instance.subscriptions.cancel(activeSub.razorpaySubscriptionId);
-    // }
+    if (activeSub) {
+      res
+        .status(400)
+        .json({ message: "You already have one current subscription active" });
+      return;
+    }
 
     // 3️⃣ Create a new subscription in DB
-    // const newSub = await prisma.subscription.create({
-    //   data: {
-    //     userId: user.id,
-    //     razorpaySubscriptionId: subscriptionResponse.id,
-    //     status: subscriptionResponse.status.toUpperCase(), // usually "CREATED"
-    //     startedAt: new Date(),
-    //   },
-    // });
+    const newSub = await prisma.subscription.create({
+      data: {
+        userId: user.id,
+        razorpaySubscriptionId: subscriptionResponse.id,
+        status: subscriptionResponse.status.toUpperCase(), // usually "CREATED"
+        startedAt: new Date(),
+      },
+    });
 
     // 4️⃣ Return subscription id to frontend
     res.status(201).json({
@@ -106,7 +102,7 @@ const payment_verification = async (req, res) => {
       razorpay_payment_id,
       razorpay_subscription_id,
       razorpay_signature,
-      razorpay_order_id
+      razorpay_order_id,
     } = req.body;
     const user = req.user;
 
@@ -115,26 +111,23 @@ const payment_verification = async (req, res) => {
         .status(401)
         .json({ success: false, message: "Not Authenticated" });
 
-    // ✅ Find subscription by razorpaySubscriptionId (unique)
-    // const subscription = await prisma.subscription.findUnique({
-    //   where: { razorpaySubscriptionId: razorpay_subscription_id },
-    // });
+    let body;
 
-    // if (!subscription)
-    //   return res
-    //     .status(404)
-    //     .json({ success: false, message: "Subscription not found" });
+    if (razorpay_order_id) {
+      body = `${razorpay_order_id}|${razorpay_payment_id}`;
+    } else {
+      body = `${razorpay_payment_id}|${razorpay_subscription_id}`;
+    }
 
     // ✅ Verify signature
     const generated_signature = crypto
       .createHmac("sha256", process.env.RAZORPAY_SECRET_KEY)
-      .update(`${razorpay_payment_id}|${razorpay_subscription_id ? razorpay_subscription_id : razorpay_order_id}`)
+      .update(body.toString())
       .digest("hex");
 
     const isAuthentic = generated_signature === razorpay_signature;
-    console.log(isAuthentic);
-    
-    if (!isAuthentic){
+
+    if (!isAuthentic) {
       return res.redirect(`${process.env.CLIENT_URL}/payment-failed`);
     }
 
@@ -165,7 +158,7 @@ const payment_verification = async (req, res) => {
     // });
 
     if (razorpay_subscription_id) {
-     return res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: "payment Verified updating your account..",
         razorpay_payment_id,
@@ -179,7 +172,6 @@ const payment_verification = async (req, res) => {
       razorpay_payment_id,
     });
   } catch (error) {
-    console.error("Payment verification error:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
@@ -463,7 +455,6 @@ const buyImages = async (req, res) => {
       order: order,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

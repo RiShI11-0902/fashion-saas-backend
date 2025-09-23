@@ -6,14 +6,14 @@ const {
   updateOrderStatus,
   deleteOrder
 } = require("../controllers/orders");
-const { checkAuth } = require("../controllers/auth");
+const { checkAuth, authMiddleware } = require("../controllers/auth");
 
 const router = express.Router();
 
 router.post("/", createOrder);
-router.post("/get", checkAuth, getOrders);
-router.get("/:id", checkAuth, getOrderById);
-router.put("/:orderId/status",checkAuth, updateOrderStatus);
-router.delete("/:id",checkAuth, deleteOrder);
+router.post("/get", authMiddleware, getOrders);
+router.get("/:id", authMiddleware, getOrderById);
+router.put("/:orderId/status",authMiddleware, updateOrderStatus);
+router.delete("/:id",authMiddleware, deleteOrder);
 
 module.exports = router;

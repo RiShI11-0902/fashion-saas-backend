@@ -16,6 +16,16 @@ const createStore = async (req, res) => {
       slug,
       mobileNumber
     } = req.body;
+
+
+    const slugExists =  await prisma.store.findUnique({
+      where: {slug: slug}
+    })
+
+    if(slugExists){
+      res.status(400).json({success: false, message:'Store with this slug already exists'})
+      return;
+    }
     
     const newStore = await prisma.store.create({
       data: {
@@ -41,7 +51,6 @@ const createStore = async (req, res) => {
 const getUserStores = async (req, res) => {
   try {
     const { userId } = req.params;
-    console.log(userId);
     const stores = await prisma.store.findMany({
       where: { ownerId: userId },
     });

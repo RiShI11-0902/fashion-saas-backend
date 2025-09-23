@@ -11,7 +11,6 @@ const Webhookverification = async (req, res) => {
     validateWebhookSignature(webhookBody, webhookSignature, webhookSecret);
 
     const event = JSON.parse(webhookBody.toString());
-    console.log("Webhook Event:", JSON.stringify(event, null,2));
 
     const { payload } = event;
     const subscription = payload.subscription?.entity;
@@ -64,7 +63,7 @@ const Webhookverification = async (req, res) => {
     }
 
     // Handle one-time payments
-    if (payment && !subscription) {
+    if (payment && !subscription && event.event === "payment.captured") {
       await prisma.payment.create({
         data: {
           razorpayPaymentId: payment.id,
@@ -80,6 +79,7 @@ const Webhookverification = async (req, res) => {
         where: { id: userId },
         data: { allowedGenerate: { increment: 100 } },
       });
+
     }
 
     res.status(200).json({ success: true });
