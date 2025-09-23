@@ -13,7 +13,7 @@ const { authMiddleware } = require("../controllers/auth");
 router.post("/", authMiddleware, createProduct);
 
 // Update
-router.put("/:id", authMiddleware, updateProduct);
+router.put("/:id", updateProduct);
 // Get all
 router.post("/store", getAllProducts);
 
