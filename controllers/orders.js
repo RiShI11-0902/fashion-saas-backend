@@ -14,12 +14,12 @@ const createOrder = async (req, res) => {
     storeId,
   } = req.body;
 
-   const lastOrder = await prisma.order.findFirst({
-      where: { storeId: storeId },
-      orderBy: { orderNumber: "desc" },
-    });
+  const lastOrder = await prisma.order.findFirst({
+    where: { storeId: storeId },
+    orderBy: { orderNumber: "desc" },
+  });
 
-    const orderNumber = lastOrder ? lastOrder.orderNumber + 1 : 1;
+  const orderNumber = lastOrder ? lastOrder.orderNumber + 1 : 1;
 
   try {
     const order = await prisma.order.create({
@@ -40,13 +40,24 @@ const createOrder = async (req, res) => {
             imageUrl: item.imageUrl,
             storeId: item.storeId,
             storeName: item.storeName,
-            size: item.size
+            size: item.size,
           })),
         },
-        orderNumber
+        orderNumber,
       },
       include: { items: true },
     });
+
+    if (order) {
+      for (let item of items) {
+        const product = await prisma.product.findUnique({
+          where: { id: item.productId },
+          select: { id: true, inventory: true, name: true },
+        });
+
+        if(product.inventory > 0) product.inventory--;
+      }
+    }
 
     res.status(201).json(order);
   } catch (error) {
@@ -58,17 +69,33 @@ const createOrder = async (req, res) => {
 // Get all orders
 const getOrders = async (req, res) => {
   try {
-    const { storeId } = req.body;    
+    const { storeId,status, orderNumber, page = 1, limit = 10 } = req.body;
+    const skip = (page - 1) * limit;
+
+    const filter = {storeId};
+    if(orderNumber){
+      filter.orderNumber = Number(orderNumber)
+    }
+    if(status != 'all'){
+      filter.status = status
+    }
 
     if (!storeId) {
       return res.status(500).json({ error: "Failed to fetch orders" });
     }
     const orders = await prisma.order.findMany({
-      where: { storeId: storeId },
+      where: filter,
       include: { items: true },
-      orderBy:{ createdAt: 'desc'}
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
     });
-    res.json(orders);
+
+    const total = await prisma.order.count({
+      where: filter,
+    });
+    
+    res.json({orders,total});
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to fetch orders" });
@@ -96,8 +123,6 @@ const updateOrderStatus = async (req, res) => {
   const { orderId } = req.params;
   const { status } = req.body;
 
-  console.log(orderId, status);
-
   try {
     const updatedOrder = await prisma.order.update({
       where: { id: orderId },
@@ -105,7 +130,6 @@ const updateOrderStatus = async (req, res) => {
     });
     res.json(updatedOrder);
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: "Failed to update order status" });
   }
 };

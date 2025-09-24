@@ -13,6 +13,7 @@ const orderRoutes = require('./routes/orders');
 const modelRoutes = require('./routes/ai-model');
 const paymentRoutes = require('./routes/payment-routes')
 const webhookRoute = require('./routes/payment-webhook-route');
+const cartRoute = require('./routes/cartRoute')
 const { authMiddleware } = require("./controllers/auth");
 
 dotenv.config();
@@ -63,6 +64,8 @@ app.use('/api/products', productRoutes);
 app.use('/api/order', orderRoutes);
 app.use('/api/generate-model', modelRoutes);
 app.use('/api/payment', authMiddleware, paymentRoutes);
+app.use('/api/cart', cartRoute );
+
 
 app.get("/", (req,res)=>{
     res.send("Hello")

@@ -4,7 +4,7 @@ const { create_Subscription, payment_verification, getKey, cancel_subscription,g
 
 const router = express.Router()
 
-router.get("/buy-subscription", create_Subscription )
+router.post("/buy-subscription", create_Subscription )
 
 router.get('/buy-images', buyImages )
 

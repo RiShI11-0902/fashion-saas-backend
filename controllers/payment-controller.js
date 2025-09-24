@@ -2,6 +2,7 @@ const { json } = require("body-parser");
 const { instance } = require("../config/paymentConfig");
 const prisma = require("../utils/prisma-client");
 const crypto = require("node:crypto");
+const { PLANS } = require("../config/planConfig");
 
 const getUserSubscriptions = async (req, res) => {
   try {
@@ -18,6 +19,7 @@ const getUserSubscriptions = async (req, res) => {
         expiresAt: true,
         createdAt: true,
         updatedAt: true,
+        razorpaySubscriptionId: true,
       },
     });
 
@@ -46,6 +48,10 @@ const getKey = (async = (req, res) => {
 
 const create_Subscription = async (req, res) => {
   try {
+    const { plan } = req.body;
+
+    const plan_chhosed = PLANS[plan];
+
     const user = req.user;
     if (!user) {
       return res
@@ -55,7 +61,7 @@ const create_Subscription = async (req, res) => {
 
     // 1️⃣ Create a new subscription on Razorpay
     const subscriptionResponse = await instance.subscriptions.create({
-      plan_id: process.env.PLAN_ID,
+      plan_id: plan_chhosed.id,
       total_count: 12,
       customer_notify: 1,
     });
@@ -89,7 +95,6 @@ const create_Subscription = async (req, res) => {
       subscription: newSub.razorpaySubscriptionId,
     });
   } catch (error) {
-    console.error("Create Subscription Error:", error);
     res
       .status(500)
       .json({ success: false, message: "Error creating subscription" });
@@ -402,31 +407,25 @@ const cancel_subscription = async (req, res) => {
         .status(401)
         .json({ sucess: false, message: "Not Authenticated" });
 
-    const subscription = await prisma.subscription.findUnique({
-      where: { userId: user.id },
-    });
+    const subscription = await prisma.subscription.findMany({
+      where: { userId: user.id, status: "ACTIVE" },
+      select: { razorpaySubscriptionId: true, id: true },
+    });    
 
-    // const subscriptionId = await prisma.subscription.findUnique({
-    //   where: { id: user.id },
-    //   select: { razorpaySubscriptionId: true },
-    // });
+    if (subscription.length > 0) {
+      const cancel = await instance.subscriptions.cancel(
+        subscription[0].razorpaySubscriptionId,
+      );
 
-    const cancel = await instance.subscriptions.cancel(
-      subscription.razorpaySubscriptionId
-    );
-
-    await prisma.subscription.update({
-      where: { id: subscription.id },
-      data: {
-        status: cancel.status,
-      },
-    });
-
-    // const payment = await prisma.payment.findUnique({
-    //   where: {
-    //     razorpaySubscriptionId: subscriptionId,
-    //   },
-    // });
+      if (cancel) {
+        await prisma.subscription.update({
+          where: { id: subscription[0].id },
+          data: {
+            status: cancel.status.toUpperCase(),
+          },
+        });
+      }
+    }
 
     res.status(200).json({
       success: true,

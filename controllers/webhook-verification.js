@@ -1,5 +1,8 @@
-const { validateWebhookSignature } = require("razorpay/dist/utils/razorpay-utils");
+const {
+  validateWebhookSignature,
+} = require("razorpay/dist/utils/razorpay-utils");
 const prisma = require("../utils/prisma-client"); // your Prisma client
+const { PLANS } = require("../config/planConfig");
 
 const Webhookverification = async (req, res) => {
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
@@ -18,9 +21,15 @@ const Webhookverification = async (req, res) => {
 
     // get userId from notes (passed in subscription/order creation)
     const userId = subscription?.notes?.userId || payment?.notes?.userId;
-    if (!userId) {
-      console.error("No userId found in notes!");
-      return res.status(400).json({ success: false, message: "No userId" });
+    const planName = subscription?.notes?.planName || payment?.notes?.planName;
+    const plan = PLANS[planName];
+
+    if (!userId && !planName) {
+      if(event.event !== "subscription.cancelled"){
+         return res
+        .status(400)
+        .json({ success: false, message: "Invalid userId or plan Id" });
+      }
     }
 
     // Handle subscription events
@@ -34,7 +43,7 @@ const Webhookverification = async (req, res) => {
               status: "ACTIVE",
               startedAt: new Date(subscription.current_start * 1000),
               expiresAt: new Date(subscription.current_end * 1000),
-              plan:"PREMIUM"
+              plan: planName.toUpperCase(),
             },
             create: {
               razorpaySubscriptionId: subscription.id,
@@ -42,14 +51,17 @@ const Webhookverification = async (req, res) => {
               startedAt: new Date(subscription.current_start * 1000),
               expiresAt: new Date(subscription.current_end * 1000),
               userId,
-              plan:"PREMIUM"
+              plan: planName.toUpperCase(),
             },
           });
 
           // Example: refresh credits for subscription payment
           await prisma.user.update({
             where: { id: userId },
-            data: { allowedGenerate: 200 },
+            data: {
+              allowedGenerate: { increment: plan?.credits },
+              plan: planName.toUpperCase(),
+            },
           });
           break;
 
@@ -63,7 +75,7 @@ const Webhookverification = async (req, res) => {
     }
 
     // Handle one-time payments
-    if (payment && !subscription && event.event === "payment.captured") {
+    if (payment && !planName && event.event === "payment.captured") {
       await prisma.payment.create({
         data: {
           razorpayPaymentId: payment.id,
@@ -79,7 +91,6 @@ const Webhookverification = async (req, res) => {
         where: { id: userId },
         data: { allowedGenerate: { increment: 100 } },
       });
-
     }
 
     res.status(200).json({ success: true });
