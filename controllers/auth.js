@@ -29,7 +29,8 @@ const register = async (req, res) => {
 };
 
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) return res.status(400).json({ error: "You are not registered" });
@@ -44,6 +45,10 @@ const login = async (req, res) => {
   );
 
   res.json({ token, user });
+  } catch (error) {
+    console.log(error);
+    
+  }
 };
 
 const authMiddleware = async (req, res, next) => {

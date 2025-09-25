@@ -35,7 +35,6 @@ const Webhookverification = async (req, res) => {
     // Handle subscription events
     if (subscription) {
       switch (event.event) {
-        case "subscription.activated":
         case "subscription.charged":
           await prisma.subscription.upsert({
             where: { razorpaySubscriptionId: subscription.id },
@@ -75,7 +74,7 @@ const Webhookverification = async (req, res) => {
     }
 
     // Handle one-time payments
-    if (payment && !planName && event.event === "payment.captured") {
+    if (payment && planName == 'AI_PACK' && event.event === "payment.captured") {
       await prisma.payment.create({
         data: {
           razorpayPaymentId: payment.id,
