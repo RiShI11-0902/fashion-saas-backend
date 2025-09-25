@@ -55,7 +55,7 @@ const createOrder = async (req, res) => {
           select: { id: true, inventory: true, name: true },
         });
 
-        if(product.inventory > 0) product.inventory--;
+        if (product.inventory > 0) product.inventory--;
       }
     }
 
@@ -69,15 +69,15 @@ const createOrder = async (req, res) => {
 // Get all orders
 const getOrders = async (req, res) => {
   try {
-    const { storeId,status, orderNumber, page = 1, limit = 10 } = req.body;
+    const { storeId, status, orderNumber, page = 1, limit = 10 } = req.body;
     const skip = (page - 1) * limit;
 
-    const filter = {storeId};
-    if(orderNumber){
-      filter.orderNumber = Number(orderNumber)
+    const filter = { storeId };
+    if (orderNumber) {
+      filter.orderNumber = Number(orderNumber);
     }
-    if(status != 'all'){
-      filter.status = status
+    if (status != "all") {
+      filter.status = status;
     }
 
     if (!storeId) {
@@ -94,8 +94,8 @@ const getOrders = async (req, res) => {
     const total = await prisma.order.count({
       where: filter,
     });
-    
-    res.json({orders,total});
+
+    res.json({ orders, total });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to fetch orders" });
@@ -120,13 +120,25 @@ const getOrderById = async (req, res) => {
 
 // Update order status
 const updateOrderStatus = async (req, res) => {
-  const { orderId } = req.params;
-  const { status } = req.body;
-
   try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+    const findOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: true },
+    });
+    if (status == "CANCELLED") {
+      for(let item of findOrder.items){
+        await prisma.product.update({
+          where: {id: item.productId},
+          data:{inventory: {increment: item.quantity} }
+        })
+      }
+    }
     const updatedOrder = await prisma.order.update({
       where: { id: orderId },
       data: { status },
+      include:{items: true}
     });
     res.json(updatedOrder);
   } catch (error) {
