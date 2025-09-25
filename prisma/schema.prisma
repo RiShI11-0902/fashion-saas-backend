@@ -86,7 +86,7 @@ model Store {
   name         String
   description  String
   logo         String
-  banner       String
+  banner       String?
   url          String    @unique
   ownerId      String
   owner        User      @relation(fields: [ownerId], references: [id])
