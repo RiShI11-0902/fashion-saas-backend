@@ -22,7 +22,7 @@ const Webhookverification = async (req, res) => {
     // get userId from notes (passed in subscription/order creation)
     const userId = subscription?.notes?.userId || payment?.notes?.userId;
     const planName = subscription?.notes?.planName || payment?.notes?.planName;
-    const plan = PLANS[planName];
+    const plan = PLANS[planName];    
 
     if (!userId && !planName) {
       if(event.event !== "subscription.cancelled"){
@@ -58,7 +58,7 @@ const Webhookverification = async (req, res) => {
           await prisma.user.update({
             where: { id: userId },
             data: {
-              allowedGenerate: { increment: plan?.credits },
+              subscriptionCredits: plan?.credits ,
               plan: planName.toUpperCase(),
             },
           });
@@ -88,7 +88,7 @@ const Webhookverification = async (req, res) => {
       // optionally increment allowedGenerate or trigger other logic
       await prisma.user.update({
         where: { id: userId },
-        data: { allowedGenerate: { increment: 100 } },
+        data: { oneTimeCredits: { increment: 100 } },
       });
     }
 

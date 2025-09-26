@@ -4,8 +4,11 @@ const prisma = require("../utils/prisma-client");
 const generateImage = async (req, res) => {
   try {
     const user = req.user;
-    if (user.allowedGenerate == 0) {
-      return res.status(400).json({ message: "Limit exceeded subscribe to generate More" });
+    if (user.oneTimeCredits === 0 && user.subscriptionCredits === 0) {
+      return res.status(400).json({
+        message:
+          "You have used all your credits. Please subscribe or purchase more to generate images.",
+      });
     }
 
     const { prompt } = req.body;
@@ -55,10 +58,27 @@ const generateImage = async (req, res) => {
       return res.status(500).json({ error: "No image generated" });
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { allowedGenerate: { decrement: 1 } },
-    });
+    let creditUsed = false;
+
+    if (user.subscriptionCredits > 0) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { subscriptionCredits: { decrement: 1 } },
+      });
+      creditUsed = true;
+    } else if (user.oneTimeCredits > 0) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { oneTimeCredits: { decrement: 1 } },
+      });
+      creditUsed = true;
+    }
+
+    if (!creditUsed) {
+      return res.status(400).json({
+        message: "No credits left. Please subscribe or buy more credits.",
+      });
+    }
 
     return res.status(200).json({
       success: true,

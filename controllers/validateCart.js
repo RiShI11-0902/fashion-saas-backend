@@ -4,8 +4,6 @@ const validateCart = async (req, res) => {
   try {
     const { items } = req.body;
     const updatedCart = [];
-
-    console.log(items);
     
     for (let item of items) {
       const product = await prisma.product.findUnique({

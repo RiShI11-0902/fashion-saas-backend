@@ -14,34 +14,35 @@ datasource db {
 }
 
 model User {
-  id              String        @id @default(uuid())
-  email           String        @unique
-  password        String?
-  avatar          String?       // Google profile picture
-  googleId        String?       @unique
-  name            String?
-  stores          Store[]
-  plan            Plan?         // FREE, PREMIUM, or null if only buying AI pack
-  subscriptions   Subscription[]
-  allowedGenerate Int           @default(1)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                  String         @id @default(uuid())
+  email               String         @unique
+  password            String?
+  avatar              String? // Google profile picture
+  googleId            String?        @unique
+  name                String?
+  stores              Store[]
+  plan                Plan? // FREE, PREMIUM, or null if only buying AI pack
+  subscriptions       Subscription[]
+  oneTimeCredits      Int            @default(1)
+  subscriptionCredits Int?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
-  payments        Payment[]
+  payments Payment[]
 }
 
 model Subscription {
-  id                     String              @id @default(uuid())
-  user                   User                @relation(fields: [userId], references: [id])
+  id                     String             @id @default(uuid())
+  user                   User               @relation(fields: [userId], references: [id])
   userId                 String
   plan                   Plan?
-  razorpaySubscriptionId String?             @unique // Razorpay subscription id (only unique globally)
-  payments               Payment[]           // relation to Payment
+  razorpaySubscriptionId String?            @unique // Razorpay subscription id (only unique globally)
+  payments               Payment[] // relation to Payment
   status                 SubscriptionStatus
-  startedAt              DateTime            @default(now())
+  startedAt              DateTime           @default(now())
   expiresAt              DateTime?
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
 
   @@index([userId, status]) // helps to quickly query ACTIVE subscription for a user
 }
@@ -49,8 +50,8 @@ model Subscription {
 model Payment {
   id                     String        @id @default(uuid())
   razorpayPaymentId      String        @unique // e.g. "pay_xxxxx"
-  razorpaySubscriptionId String?       // optional if using orders
-  razorpaySignature      String?       // signature from webhook
+  razorpaySubscriptionId String? // optional if using orders
+  razorpaySignature      String? // signature from webhook
   amount                 Int
   currency               String        @default("INR")
   status                 PaymentStatus
@@ -79,7 +80,6 @@ enum PaymentStatus {
   CAPTURED
   FAILED
 }
-
 
 model Store {
   id           String    @id @default(uuid())
@@ -157,5 +157,3 @@ enum OrderStatus {
   DELIVERED
   CANCELLED
 }
-
-
