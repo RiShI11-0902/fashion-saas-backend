@@ -15,6 +15,9 @@ const createStore = async (req, res) => {
       categories,
       slug,
       mobileNumber,
+      instaHandle,
+      fbHandle,
+      location,
     } = req.body;
 
     const slugExists = await prisma.store.findUnique({
@@ -40,6 +43,9 @@ const createStore = async (req, res) => {
         categories,
         slug,
         mobileNumber,
+        instaHandle,
+        fbHandle,
+        location,
       },
     });
 
@@ -158,7 +164,7 @@ const createStoreFeedback = async (req, res) => {
 // backend
 const getStoreFeedback = async (req, res) => {
   try {
-    const { id } = req.params;  
+    const { id } = req.params;
 
     const store = await prisma.store.findUnique({
       where: { id },
@@ -182,7 +188,6 @@ const getStoreFeedback = async (req, res) => {
   }
 };
 
-
 module.exports = {
   createStore,
   updateStore,
@@ -191,5 +196,5 @@ module.exports = {
   getUserStoreBySlug,
   getUserStoreById,
   createStoreFeedback,
-  getStoreFeedback
+  getStoreFeedback,
 };
