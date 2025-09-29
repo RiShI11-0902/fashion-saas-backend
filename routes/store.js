@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createStore, updateStore, deleteStore,getUserStores, getUserStoreById, getUserStoreBySlug} = require('../controllers/store');
+const { createStore, updateStore, deleteStore,getUserStores, getUserStoreById, getUserStoreBySlug, createStoreFeedback, getStoreFeedback} = require('../controllers/store');
 const { checkAuth, authMiddleware } = require('../controllers/auth');
 
 // Create store
@@ -21,6 +21,8 @@ router.get('/id/:storeId', authMiddleware, getUserStoreById);
 //Get Store by Slug
 router.get('/:slug', getUserStoreBySlug);
 
+router.post("/feedback", createStoreFeedback)
 
+router.get("/feedback/:id", getStoreFeedback)
 
 module.exports = router;

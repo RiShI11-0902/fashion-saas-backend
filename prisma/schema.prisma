@@ -94,9 +94,14 @@ model Store {
   categories   String[]
   slug         String    @unique
   mobileNumber String
+  instaHandle  String?
+  fbHandle     String?
+  location     String?
   orders       Order[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @default(now())
+
+  Feedback Feedback[]
 }
 
 model Product {
@@ -132,6 +137,18 @@ model Order {
   store   Store  @relation(fields: [storeId], references: [id])
 
   items OrderItem[]
+}
+
+model Feedback {
+  id           String   @id @default(uuid())
+  storeId      String
+  store        Store    @relation(fields: [storeId], references: [id])
+  customerName String
+  rating       Int
+  comment      String
+  productName      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model OrderItem {

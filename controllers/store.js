@@ -14,19 +14,21 @@ const createStore = async (req, res) => {
       ownerId,
       categories,
       slug,
-      mobileNumber
+      mobileNumber,
     } = req.body;
 
+    const slugExists = await prisma.store.findUnique({
+      where: { slug: slug },
+    });
 
-    const slugExists =  await prisma.store.findUnique({
-      where: {slug: slug}
-    })
-
-    if(slugExists){
-      res.status(400).json({success: false, message:'Store with this slug already exists'})
+    if (slugExists) {
+      res.status(400).json({
+        success: false,
+        message: "Store with this slug already exists",
+      });
       return;
     }
-    
+
     const newStore = await prisma.store.create({
       data: {
         name,
@@ -37,7 +39,7 @@ const createStore = async (req, res) => {
         ownerId,
         categories,
         slug,
-        mobileNumber
+        mobileNumber,
       },
     });
 
@@ -79,7 +81,6 @@ const getUserStoreBySlug = async (req, res) => {
     const store = await prisma.store.findUnique({
       where: { slug: slug },
     });
-
 
     res.json({ store });
   } catch (error) {
@@ -124,6 +125,64 @@ const deleteStore = async (req, res) => {
   }
 };
 
+const createStoreFeedback = async (req, res) => {
+  try {
+    const { storeId, feedback } = req.body;
+    const findStore = await prisma.store.findUnique({
+      where: { id: storeId },
+    });
+    if (!findStore) {
+      return res
+        .status(400)
+        .json({ message: "Store Not Found", success: false });
+    }
+
+    await prisma.feedback.create({
+      data: {
+        ...feedback,
+        storeId,
+      },
+    });
+
+    return res
+      .status(200)
+      .json({ message: "Feedback added successfully", success: true });
+  } catch (error) {
+    console.log(error);
+    return res
+      .status(500)
+      .json({ message: "Something went wrong", success: false });
+  }
+};
+
+// backend
+const getStoreFeedback = async (req, res) => {
+  try {
+    const { id } = req.params;  
+
+    const store = await prisma.store.findUnique({
+      where: { id },
+    });
+
+    if (!store) {
+      return res.status(404).json({ message: "Store not found" });
+    }
+
+    const feedbacks = await prisma.feedback.findMany({
+      where: { storeId: id },
+      orderBy: {
+        createdAt: "desc", // newest first
+      },
+    });
+
+    return res.status(200).json(feedbacks);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
+
 module.exports = {
   createStore,
   updateStore,
@@ -131,4 +190,6 @@ module.exports = {
   getUserStores,
   getUserStoreBySlug,
   getUserStoreById,
+  createStoreFeedback,
+  getStoreFeedback
 };
