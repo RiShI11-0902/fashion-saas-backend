@@ -82,24 +82,25 @@ enum PaymentStatus {
 }
 
 model Store {
-  id           String    @id @default(uuid())
-  name         String
-  description  String
-  logo         String
-  banner       String?
-  url          String    @unique
-  ownerId      String
-  owner        User      @relation(fields: [ownerId], references: [id])
-  products     Product[]
-  categories   String[]
-  slug         String    @unique
-  mobileNumber String
-  instaHandle  String?
-  fbHandle     String?
-  location     String?
-  orders       Order[]
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @default(now())
+  id            String    @id @default(uuid())
+  name          String
+  description   String
+  logo          String
+  banner        String?
+  url           String    @unique
+  ownerId       String
+  owner         User      @relation(fields: [ownerId], references: [id])
+  products      Product[]
+  categories    String[]
+  slug          String    @unique
+  mobileNumber  String
+  instaHandle   String?
+  fbHandle      String?
+  location      String?
+  shippingPrice Int?      @default(0)
+  orders        Order[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now())
 
   Feedback Feedback[]
 }
@@ -146,7 +147,7 @@ model Feedback {
   customerName String
   rating       Int
   comment      String
-  productName      String?
+  productName  String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }

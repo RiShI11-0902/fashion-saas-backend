@@ -18,6 +18,7 @@ const createStore = async (req, res) => {
       instaHandle,
       fbHandle,
       location,
+      shippingPrice
     } = req.body;
 
     const slugExists = await prisma.store.findUnique({
@@ -31,6 +32,8 @@ const createStore = async (req, res) => {
       });
       return;
     }
+
+    const shipping_price = Number(shippingPrice)
 
     const newStore = await prisma.store.create({
       data: {
@@ -46,6 +49,7 @@ const createStore = async (req, res) => {
         instaHandle,
         fbHandle,
         location,
+        shippingPrice:shipping_price
       },
     });
 
