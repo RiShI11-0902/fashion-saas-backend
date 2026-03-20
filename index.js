@@ -22,7 +22,6 @@ app.use(cookieParser());
 
 const origins = [
   "https://shopmonk.shop",
-  "http://localhost:8080"
 ]
 
 app.use(
