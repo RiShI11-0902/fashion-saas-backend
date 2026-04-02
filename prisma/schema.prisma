@@ -130,14 +130,17 @@ model Order {
   customerAddress       String
   totalAmount           Float
   status                OrderStatus @default(PENDING)
-  orderNumber           Int         @unique @default(autoincrement()) // customer-facing
+  orderNumber           Int
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
+  orderCounter          Int         @default(0)
 
   storeId String
   store   Store  @relation(fields: [storeId], references: [id])
 
   items OrderItem[]
+
+  @@unique([storeId, orderNumber])
 }
 
 model Feedback {

@@ -27,7 +27,7 @@ const origins = [
 app.use(
   cors({
     origin: (origin , callback)=>{
-      if(!origin || origins.includes(origin || process.env.NODE_ENV == 'development')){
+      if(!origin || origins.includes(origin) || process.env.NODE_ENV == 'development'){
         callback(null, true); 
       } else {
         callback(new Error("Not allowed by CORS")); // Reject the request

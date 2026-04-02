@@ -14,13 +14,19 @@ const createOrder = async (req, res) => {
     storeId,
   } = req.body;
 
-  const lastOrder = await prisma.order.findFirst({
-    where: { storeId: storeId },
-    orderBy: { orderNumber: "desc" },
+  const store = await prisma.store.update({
+    where: { id: storeId },
+    data: {
+      orderCounter: {
+        increment: 1,
+      },
+    },
+    select: {
+      orderCounter: true,
+    },
   });
 
-  const orderNumber = lastOrder ? lastOrder.orderNumber + 1 : 1;
-
+  const orderNumber = store.orderCounter;
   try {
     const order = await prisma.order.create({
       data: {
@@ -50,12 +56,19 @@ const createOrder = async (req, res) => {
 
     if (order) {
       for (let item of items) {
-        const product = await prisma.product.findUnique({
-          where: { id: item.productId },
-          select: { id: true, inventory: true, name: true },
+        await prisma.product.update({
+          where: {
+            id: item.productId,
+            inventory: {
+              gte: item.quantity,
+            },
+          },
+          data: {
+            inventory: {
+              decrement: item.quantity,
+            },
+          },
         });
-
-        if (product.inventory > 0) product.inventory--;
       }
     }
 
@@ -128,17 +141,17 @@ const updateOrderStatus = async (req, res) => {
       include: { items: true },
     });
     if (status == "CANCELLED") {
-      for(let item of findOrder.items){
+      for (let item of findOrder.items) {
         await prisma.product.update({
-          where: {id: item.productId},
-          data:{inventory: {increment: item.quantity} }
-        })
+          where: { id: item.productId },
+          data: { inventory: { increment: item.quantity } },
+        });
       }
     }
     const updatedOrder = await prisma.order.update({
       where: { id: orderId },
       data: { status },
-      include:{items: true}
+      include: { items: true },
     });
     res.json(updatedOrder);
   } catch (error) {
