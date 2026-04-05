@@ -88,7 +88,7 @@ const Webhookverification = async (req, res) => {
       // optionally increment allowedGenerate or trigger other logic
       await prisma.user.update({
         where: { id: userId },
-        data: { oneTimeCredits: { increment: 100 } },
+        data: { oneTimeCredits: { increment: 250 } },
       });
     }
 
