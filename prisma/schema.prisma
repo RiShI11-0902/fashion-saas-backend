@@ -23,7 +23,7 @@ model User {
   stores              Store[]
   plan                Plan? // FREE, PREMIUM, or null if only buying AI pack
   subscriptions       Subscription[]
-  oneTimeCredits      Int            @default(1)
+  oneTimeCredits      Int            @default(5)
   subscriptionCredits Int?
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt

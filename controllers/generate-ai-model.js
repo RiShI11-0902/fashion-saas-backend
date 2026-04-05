@@ -63,13 +63,13 @@ const generateImage = async (req, res) => {
     if (user.subscriptionCredits > 0) {
       await prisma.user.update({
         where: { id: user.id },
-        data: { subscriptionCredits: { decrement: 1 } },
+        data: { subscriptionCredits: { decrement: 5 } },
       });
       creditUsed = true;
     } else if (user.oneTimeCredits > 0) {
       await prisma.user.update({
         where: { id: user.id },
-        data: { oneTimeCredits: { decrement: 1 } },
+        data: { oneTimeCredits: { decrement: 5 } },
       });
       creditUsed = true;
     }
