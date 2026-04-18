@@ -101,6 +101,7 @@ model Store {
   orders        Order[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now())
+  orderCounter  Int       @default(0)
 
   Feedback Feedback[]
 }
@@ -133,7 +134,6 @@ model Order {
   orderNumber           Int
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
-  orderCounter          Int         @default(0)
 
   storeId String
   store   Store  @relation(fields: [storeId], references: [id])
